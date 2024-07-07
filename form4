@@ -1,0 +1,77 @@
+using Npgsql;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace NesneProje
+{
+    public partial class Form4 : Form
+    {
+        public Form4()
+        {
+            InitializeComponent();
+        }
+        NpgsqlConnection baglanti = new NpgsqlConnection("Server=localhost; Port=5432; Database=postgres; Username=postgres; Password=1234;");
+
+        private void Form4_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private void button2_Click(object sender, EventArgs e)//Puanı En Yüksek Filmlere göre sıralama
+        {
+            try
+            {
+                baglanti.Open();
+                NpgsqlDataAdapter komut = new NpgsqlDataAdapter("select ad,avg(cast(puan as int)) as OrtalamaPuan from yorumlar group by ad ", baglanti);
+                DataSet data = new DataSet();
+                komut.Fill(data);
+                dataGridView1.DataSource = (data.Tables[0]);
+                
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+            }
+            finally
+            {
+                if (baglanti != null)
+                {
+                    baglanti.Close();
+                }
+            }
+        }
+
+        private void button1_Click(object sender, EventArgs e)//Degerlendirme Sayisina Göre Filmler
+        {
+            try
+            {
+                baglanti.Open();
+                NpgsqlDataAdapter komut = new NpgsqlDataAdapter("select ad,count(*) as \"Degerlendirme Sayisi\" from yorumlar group by ad", baglanti);
+                DataSet ds=new DataSet();
+                komut.Fill(ds);
+                dataGridView1.DataSource= (ds.Tables[0]);
+                
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+            }
+            finally
+            {
+                if (baglanti != null)
+                {
+                    baglanti.Close();
+                }
+            }
+           
+            
+        }
+    }
+}
