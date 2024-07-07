@@ -1,0 +1,41 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace NesneProje
+{
+    internal class oyuncu_dictionary
+    {
+        public class FilmOyuncuListesi
+        {
+            private Dictionary<string, Dictionary<string, bool>> filmOyuncular = new Dictionary<string, Dictionary<string, bool>>();
+
+            public void EkleOyuncu(string filmAdi, string oyuncuAdi)
+            {
+                if (!filmOyuncular.ContainsKey(filmAdi))
+                {
+                    filmOyuncular.Add(filmAdi, new Dictionary<string, bool>());
+                }
+
+                if (!filmOyuncular[filmAdi].ContainsKey(oyuncuAdi))
+                {
+                    filmOyuncular[filmAdi].Add(oyuncuAdi, true);
+                }
+            }
+
+            public List<string> ListeleOyuncular(string filmAdi)
+            {
+                if (filmOyuncular.ContainsKey(filmAdi))
+                {
+                    return new List<string>(filmOyuncular[filmAdi].Keys);
+                }
+                else
+                {
+                    return new List<string> { $"'{filmAdi}' filmi için oyuncu bulunamadı." };
+                }
+            }
+        }
+    }
+}
