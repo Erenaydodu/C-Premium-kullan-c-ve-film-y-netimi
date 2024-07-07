@@ -1,0 +1,573 @@
+using Npgsql;
+using System.Data;
+using System.Security.Cryptography.X509Certificates;
+using System.Windows.Forms;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+
+namespace NesneProje
+{
+    public partial class Form1 : Form
+    {
+        public static Form1 instance;
+        public Form1()
+        {
+            InitializeComponent();
+            instance = this;
+        }
+        NpgsqlConnection baglanti = new NpgsqlConnection("Server=localhost; Port=5432; Database=postgres; Username=postgres; Password=1234;");
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            NpgsqlConnection baglanti = new NpgsqlConnection("Server=localhost; Port=5432; Database=postgres; Username=postgres; Password=1234;");
+            baglanti.Open();
+            NpgsqlCommand komut9 = new NpgsqlCommand("select * from sayac", baglanti);
+            NpgsqlDataReader reader = komut9.ExecuteReader();
+            if (reader.Read())
+            {
+                //Yeni film eklenmişse bildirim geliyor
+                string sayac = reader[0].ToString();
+
+                if (sayac == "1")
+                {
+                    notifyIcon1.Icon = SystemIcons.Question;
+                    notifyIcon1.Visible = true;
+                    notifyIcon1.BalloonTipText = "Yeni Filmler Eklendi";
+                    notifyIcon1.ShowBalloonTip(3000);
+                    baglanti.Close();
+                    baglanti.Open();
+                    NpgsqlCommand komut3 = new NpgsqlCommand("update sayac set sayac='0' where sayac='1'", baglanti);
+                    komut3.ExecuteNonQuery();
+
+                }
+                else if (sayac == "0")
+                {
+                    notifyIcon1.Visible = false;
+                }
+                baglanti.Close();
+            }
+
+
+
+
+
+            //Veritabanındaki kayıtları form yüklendiğinde nesne olarak oluşturuyorum
+            StandartKullanici standart1 = new StandartKullanici("Eren", "Aydogdu", "1", "20042004", "Erkek");
+            PremiumKullanici premium = new PremiumKullanici("Umut", "Özbek", "2", "02022003", "Erkek");
+            StandartKullanici standart2 = new StandartKullanici("Recep", "Hakkı", "3", "12112211", "Erkek");
+
+
+
+
+            
+            try
+            {
+
+                baglanti = new NpgsqlConnection("Server=localhost; Port=5432; Database=postgres; Username=postgres; Password=1234;");
+                baglanti.Open();
+
+
+                NpgsqlCommand command = new NpgsqlCommand("select üyeliktürü from  kullanıcı where ad= '" + Form2.instance.tb1.Text + "' ", baglanti);
+
+
+                //Üyelik türüne göre yorum yapma özelliği
+                NpgsqlDataReader dr = command.ExecuteReader();
+                if (dr.Read())
+                {
+                    string üyeliktürü = dr["üyeliktürü"].ToString();
+
+
+                    if (üyeliktürü == "Standart" || üyeliktürü == "standart")
+                    {
+                        MessageBox.Show("Standart kullanıcı");
+                        button9.Hide();
+                        textBox7.Hide();
+                        textBox8.Hide();
+                        textBox12.Hide();
+                        label7.Hide();
+                        label8.Hide();
+                        label12.Hide();
+                        label19.Show();
+                        label22.Show();
+
+                    }
+                    else
+                    {
+                        MessageBox.Show("Premium Kullanıcı");
+                        label19.Hide();
+                        label22.Hide();
+                    }
+                }
+                dr.Close();
+
+
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+            }
+            finally
+            {
+                if (baglanti != null)
+                {
+                    baglanti.Close();
+                }
+            }
+        }
+        //Soyut Classtan standart ve premium class oluşturma
+        abstract class Kullanici
+        {
+            public string Ad { get; set; }
+            public string Soyad { get; set; }
+            public string Tc { get; set; }
+            public string DogumTarihi { get; set; }
+            public string Cinsiyet { get; set; }
+            public string Uyelik { get; set; }
+
+            // Parametreli constructor
+            public Kullanici(string ad, string soyad, string tc, string dogumTarihi, string cinsiyet, string uyelikTuru)
+            {
+                Ad = ad;
+                Soyad = soyad;
+                Tc = tc;
+                DogumTarihi = dogumTarihi;
+                Cinsiyet = cinsiyet;
+                Uyelik = uyelikTuru;
+            }
+
+            // Soyut metot: Üyelik ücreti hesaplaması
+            public abstract double ucret_hesapla();
+            public abstract bool YorumYap();
+        }
+
+        class StandartKullanici : Kullanici
+        {
+            // Parametreli constructor
+            public StandartKullanici(string ad, string soyad, string tc, string dogumTarihi, string cinsiyet)
+                : base(ad, soyad, tc, dogumTarihi, cinsiyet, "Standart")
+            {
+            }
+            public override bool YorumYap()
+            {
+                return false;
+
+            }
+
+
+            // Standart kullanıcılar için üyelik ücreti hesaplaması
+            public override double ucret_hesapla()
+            {
+                // İndirimsiz fiyat olarak 100TL
+                return 100;
+            }
+        }
+
+        class PremiumKullanici : Kullanici
+        {
+            // Parametreli constructor
+            public PremiumKullanici(string ad, string soyad, string tc, string dogumTarihi, string cinsiyet)
+                : base(ad, soyad, tc, dogumTarihi, cinsiyet, "Premium")
+            {
+            }
+            public override bool YorumYap()
+            {
+                return true;
+            }
+
+            // Premium kullanıcılar için üyelik ücreti hesaplaması
+            public override double ucret_hesapla()
+            {
+                // İndirimsiz fiyat olarak 100TL'ye %25 artış
+                return 100 * 1.25;
+            }
+
+
+        }
+
+
+
+        public void VeriListele()
+        {
+
+            NpgsqlConnection baglanti = null;
+            try
+            {
+                baglanti = new NpgsqlConnection("Server=localhost; Port=5432; Database=postgres; Username=postgres; Password=1234;");
+                baglanti.Open();
+
+
+
+                NpgsqlDataAdapter kmt = new NpgsqlDataAdapter("SELECT * FROM kullanıcı where ad='" + Form2.instance.tb1.Text + "' AND sifre='" + Form2.instance.tb2.Text + "'", baglanti);
+                DataSet data = new DataSet();
+                kmt.Fill(data);
+                dataGridView1.DataSource = (data.Tables[0]);
+
+
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+            }
+            finally
+            {
+                if (baglanti != null)
+                {
+                    baglanti.Close();
+                }
+            }
+        }
+
+
+        private void button1_Click(object sender, EventArgs e)//Giris yapan kullanıcıcın bilgilerini getirme
+        {
+
+
+            NpgsqlConnection baglanti = null;
+            try
+            {
+                baglanti = new NpgsqlConnection("Server=localhost; Port=5432; Database=postgres; Username=postgres; Password=1234;");
+                baglanti.Open();
+
+                NpgsqlDataAdapter kmt = new NpgsqlDataAdapter("SELECT * FROM kullanıcı where ad='" + Form2.instance.tb1.Text + "' AND sifre='" + Form2.instance.tb2.Text + "'", baglanti);
+                DataSet data = new DataSet();
+                kmt.Fill(data);
+                dataGridView1.DataSource = (data.Tables[0]);
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+            }
+            finally
+            {
+                if (baglanti != null)
+                {
+                    baglanti.Close();
+                }
+            }
+        }
+
+        private void button3_Click(object sender, EventArgs e)//Yeni Kullanıcı oluşturma
+        {
+
+            baglanti.Open();
+            if (textBox3.Text == "" || textBox2.Text == "" || textBox1.Text == "" || textBox4.Text == "" || textBox6.Text == "" || textBox5.Text == "")
+            {
+                MessageBox.Show("Lütfen Boş Deger Bırakmayınız...");
+            }
+
+            else
+            {
+                NpgsqlCommand komutekle = new NpgsqlCommand("insert into kullanıcı(ad,soyad,tc,dogumtarihi,cinsiyet,üyeliktürü,sifre) values(@k1,@k2,@k3,@k4,@k5,@k6,@k7)", baglanti);
+                komutekle.Parameters.AddWithValue("@k1", (textBox1.Text));
+                komutekle.Parameters.AddWithValue("@k2", textBox2.Text);
+                komutekle.Parameters.AddWithValue("@k3", textBox3.Text);
+                komutekle.Parameters.AddWithValue("@k4", (textBox4.Text));
+                komutekle.Parameters.AddWithValue("@k5", (textBox5.Text));
+                komutekle.Parameters.AddWithValue("@k6", textBox6.Text);
+                komutekle.Parameters.AddWithValue("@k7", textBox9.Text);
+                komutekle.ExecuteNonQuery();
+                baglanti.Close();
+                MessageBox.Show("kayıt ekleme işlemi başarılı.");
+                //Kayıt olan kullanıcının standart premium bilgisine göre nesne oluşturma
+                if (textBox6.Text == "Standart" || textBox6.Text == "standart")
+                {
+                    StandartKullanici standartkullanici = new StandartKullanici(textBox1.Text, textBox2.Text, textBox3.Text, textBox4.Text, textBox5.Text);
+                    standartkullanici.YorumYap();
+                }
+                else if (textBox6.Text == "Premium" || textBox6.Text == "premium")
+                {
+                    PremiumKullanici premiumkullanici = new PremiumKullanici(textBox1.Text, textBox2.Text, textBox3.Text, textBox4.Text, textBox5.Text);
+                }
+                else { MessageBox.Show("Lütfen Yetkilendirme Yapiniz..."); }
+            }
+
+
+
+
+
+        }
+
+        private void button4_Click(object sender, EventArgs e)//Silme İşlemi
+        {
+            if (textBox3.Text == "")
+            {
+                MessageBox.Show("Tc no giriniz Kayıt silme işlemi tc noya göre yapılmaktadır");
+            }
+            else
+            {
+                baglanti.Open();
+                NpgsqlCommand verisil = new NpgsqlCommand("Delete from kullanıcı where tc=@tcno", baglanti);
+                verisil.Parameters.AddWithValue("@tcno", (textBox3.Text));
+
+                verisil.ExecuteNonQuery();
+                baglanti.Close();
+                VeriListele();
+                MessageBox.Show("Veriler Silindi...");
+            }
+
+        }
+
+        private void button2_Click(object sender, EventArgs e)//Güncelleme İşlemleri
+        {
+            baglanti.Open();
+            if (textBox3.Text == "" || textBox2.Text == "" || textBox1.Text == "" || textBox4.Text == "" || textBox6.Text == "" || textBox5.Text == "")
+            {
+                MessageBox.Show("Lütfen Boş Deger Bırakmayınız...");
+            }
+            else
+            {
+                NpgsqlCommand komut = new NpgsqlCommand("update kullanıcı set ad=@ad,soyad=@soyad,tc=@tc,dogumtarihi=@dogumtarihi,cinsiyet=@cinsiyet,üyeliktürü=@üyeliktürü where tc=@tc", baglanti);
+                komut.Parameters.AddWithValue("@ad", textBox1.Text);
+                komut.Parameters.AddWithValue("@soyad", textBox2.Text);
+                komut.Parameters.AddWithValue("@tc", (textBox3.Text));
+                komut.Parameters.AddWithValue("@dogumtarihi", textBox4.Text);
+                komut.Parameters.AddWithValue("@cinsiyet", textBox5.Text);
+                komut.Parameters.AddWithValue("@üyeliktürü", textBox6.Text);
+                komut.ExecuteNonQuery();
+                baglanti.Close();
+                MessageBox.Show("Bilgiler Güncellendi");
+                VeriListele();
+            }
+
+        }
+
+        public class FilmOyuncuListesi
+        {
+            public Dictionary<string, Dictionary<string, bool>> filmOyuncular = new Dictionary<string, Dictionary<string, bool>>();
+
+            public void EkleOyuncu(string filmAdi, string oyuncuAdi)
+            {
+                if (!filmOyuncular.ContainsKey(filmAdi))
+                {
+                    filmOyuncular.Add(filmAdi, new Dictionary<string, bool>());
+                }
+
+                if (!filmOyuncular[filmAdi].ContainsKey(oyuncuAdi))
+                {
+                    filmOyuncular[filmAdi].Add(oyuncuAdi, true);
+                }
+
+            }
+            public List<string> ListeleOyuncular(string filmAdi)
+            {
+                if (filmOyuncular.ContainsKey(filmAdi))
+                {
+
+                    return new List<string>(filmOyuncular[filmAdi].Keys);
+                }
+                else
+                {
+                    return new List<string> { $"'{filmAdi}' filmi için oyuncu bulunamadı." };
+                }
+            }
+
+
+        }
+
+
+        private void button5_Click(object sender, EventArgs e)//Oyuncu Listeleme
+        {
+            NpgsqlConnection baglanti = null;
+            try
+            {
+                baglanti = new NpgsqlConnection("Server=localhost; Port=5432; Database=postgres; Username=postgres; Password=1234;");
+                baglanti.Open();
+
+                NpgsqlDataAdapter kmt = new NpgsqlDataAdapter("select * from  oyuncular ", baglanti);
+
+                DataSet data = new DataSet();
+                kmt.Fill(data);
+                dataGridView4.DataSource = (data.Tables[0]);
+
+
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+            }
+            finally
+            {
+                if (baglanti != null)
+                {
+                    baglanti.Close();
+                }
+            }
+
+
+
+        }
+
+        private void textBox13_TextChanged(object sender, EventArgs e)//Filme Göre Arama Yapma
+        {
+
+            DataTable data = new DataTable();
+            NpgsqlDataAdapter datas = new NpgsqlDataAdapter("Select * from filmler Where lower(ad) like lower('%" + textBox13.Text + "%')", baglanti);
+            datas.Fill(data);
+            dataGridView2.DataSource = data;
+
+        }
+
+        private void button6_Click(object sender, EventArgs e)//Filmleri Listeleme
+        {
+            NpgsqlConnection baglanti = null;
+            try
+            {
+                baglanti = new NpgsqlConnection("Server=localhost; Port=5432; Database=postgres; Username=postgres; Password=1234;");
+                baglanti.Open();
+
+                NpgsqlDataAdapter kmt = new NpgsqlDataAdapter("select * from  filmler ", baglanti);
+
+                DataSet data = new DataSet();
+                kmt.Fill(data);
+                dataGridView2.DataSource = (data.Tables[0]);
+
+
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+            }
+            finally
+            {
+                if (baglanti != null)
+                {
+                    baglanti.Close();
+                }
+            }
+        }
+
+        private void textBox14_TextChanged(object sender, EventArgs e)//Film Türüne Göre Arama Yapma
+        {
+            DataTable data = new DataTable();
+            NpgsqlDataAdapter datas = new NpgsqlDataAdapter("Select * from filmler Where lower(tür) like lower('%" + textBox14.Text + "%')", baglanti);
+            datas.Fill(data);
+            dataGridView2.DataSource = data;
+
+        }
+
+        private void textBox15_TextChanged(object sender, EventArgs e)//Yönetmen Adına Göre Arama Yapma
+        {
+            DataTable data = new DataTable();
+            NpgsqlDataAdapter datas = new NpgsqlDataAdapter("Select * from filmler Where lower(yönetmen) like lower('%" + textBox15.Text + "%')", baglanti);
+            datas.Fill(data);
+            dataGridView2.DataSource = data;
+
+
+        }
+
+
+
+        private void button7_Click(object sender, EventArgs e)//FilmListesi Ekleme
+        {
+            string a = dataGridView2.CurrentRow.Cells[0].Value.ToString();
+
+
+
+            listBoxOyuncular.Items.Add(a);
+        }
+
+        private void button8_Click(object sender, EventArgs e)//FilmListesi Silme
+        {
+            string a = dataGridView2.CurrentRow.Cells[0].Value.ToString();
+            listBoxOyuncular.Items.Remove(a);
+        }
+
+        private void button9_Click(object sender, EventArgs e)//Degerlendirme
+        {
+            baglanti.Open();
+            NpgsqlCommand komutekle = new NpgsqlCommand("insert into yorumlar(ad,yorum,puan) values(@k1,@k2,@k3)", baglanti);
+            komutekle.Parameters.AddWithValue("@k1", (textBox7.Text));
+            komutekle.Parameters.AddWithValue("@k2", textBox8.Text);
+            komutekle.Parameters.AddWithValue("@k3", textBox12.Text);
+            komutekle.ExecuteNonQuery();
+            baglanti.Close();
+            MessageBox.Show("Değerlendirme Eklenmiştir...");
+        }
+
+        private void button10_Click(object sender, EventArgs e)//Degerlendirmeler Göster Butonu
+        {
+            NpgsqlConnection baglanti = null;
+            try
+            {
+                baglanti = new NpgsqlConnection("Server=localhost; Port=5432; Database=postgres; Username=postgres; Password=1234;");
+                baglanti.Open();
+
+                NpgsqlDataAdapter kmt = new NpgsqlDataAdapter("select * from  yorumlar ", baglanti);
+
+                DataSet data = new DataSet();
+                kmt.Fill(data);
+                dataGridView3.DataSource = (data.Tables[0]);
+
+
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+            }
+            finally
+            {
+                if (baglanti != null)
+                {
+                    baglanti.Close();
+                }
+            }
+        }
+
+        private void button11_Click(object sender, EventArgs e)
+        {
+            Form4 form4 = new Form4();
+            form4.ShowDialog();
+        }
+
+        private void textBox16_TextChanged(object sender, EventArgs e)//Film Adına GÖre Oyuncu Arama
+        {
+            DataTable data = new DataTable();
+            NpgsqlDataAdapter datas = new NpgsqlDataAdapter("Select * from oyuncular Where lower(filmadı) like lower('%" + textBox16.Text + "%')", baglanti);
+            datas.Fill(data);
+            dataGridView4.DataSource = data;
+        }
+
+        private void textBox17_TextChanged(object sender, EventArgs e)//Oyuncu Adına GÖre Arama Yap
+        {
+            DataTable data = new DataTable();
+            NpgsqlDataAdapter datas = new NpgsqlDataAdapter("Select * from oyuncular Where lower(oyuncular) like lower('%" + textBox17.Text + "%')", baglanti);
+            datas.Fill(data);
+            dataGridView4.DataSource = data;
+        }
+
+        private void button12_Click(object sender, EventArgs e)
+        {
+            tabControl1.SelectedIndex++;
+        }
+
+        private void button13_Click(object sender, EventArgs e)
+        {
+            tabControl1.SelectedIndex++;
+        }
+
+        private void button14_Click(object sender, EventArgs e)
+        {
+            tabControl1.SelectedIndex--;
+        }
+
+        private void button15_Click(object sender, EventArgs e)
+        {
+            tabControl1.SelectedIndex++;
+        }
+
+        private void button16_Click(object sender, EventArgs e)
+        {
+            tabControl1.SelectedIndex--;
+        }
+
+        private void button17_Click(object sender, EventArgs e)
+        {
+            tabControl1.SelectedIndex--;
+        }
+    }
+}
